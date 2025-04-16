@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Recognition Authentication</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js"></script>
+    <script>
+        async function openCameraAndDetectFace() {
+            const videoElement = document.getElementById('video');
+            const resultsElement = document.getElementById('results');
+
+            try {
+                // Access the device camera
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                videoElement.srcObject = stream;
+                videoElement.play();
+
+                // Load face detection models
+                await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
+                resultsElement.innerHTML = "Models loaded. Scanning for faces...";
+
+                // Detect faces in real-time
+                videoElement.addEventListener('play', async () => {
+                    resultsElement.innerHTML = "Scanning for faces...";
+                    const canvas = faceapi.createCanvasFromMedia(videoElement);
+                    document.body.append(canvas);
+                    const displaySize = { width: videoElement.width, height: videoElement.height };
+                    faceapi.matchDimensions(canvas, displaySize);
+
+                    setInterval(async () => {
+                        const detections = await faceapi.detectAllFaces(videoElement, new faceapi.TinyFaceDetectorOptions());
+                        canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+                        faceapi.draw.drawDetections(canvas, faceapi.resizeResults(detections, displaySize));
+
+                        if (detections.length > 0) {
+                            resultsElement.innerHTML = `${detections.length} face(s) detected!`;
+                        } else {
+                            resultsElement.innerHTML = "No faces detected.";
+                        }
+                    }, 100);
+                });
+            } catch (error) {
+                console.error('Error accessing the camera or detecting faces:', error);
+                resultsElement.innerHTML = 'Could not access the camera or detect faces. Please check your permissions.';
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="container">
+        <h1>Face Recognition Authentication</h1>
+        <button class="btn" onclick="openCameraAndDetectFace()">Open Camera and Scan</button>
+        <div id="camera">
+            <video id="video" width="640" height="480" autoplay muted></video>
+        </div>
+        <p id="results"></p>
+    </div>
+</body>
+</html>
